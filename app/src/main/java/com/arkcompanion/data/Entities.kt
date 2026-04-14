@@ -21,12 +21,3 @@ data class ArcEntity(
     val imageUrl: String,
     val description: String
 )
-
-@Entity(tableName = "hideout_tables")
-data class HideoutTableEntity(
-    @PrimaryKey val id: String,
-    val name: String,
-    val imageUrl: String,
-    val currentLevel: Int,
-    val maxLevel: Int = 10
-)

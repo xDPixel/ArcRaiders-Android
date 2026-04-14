@@ -39,11 +39,25 @@ data class ArcDto(
 )
 
 @Serializable
+data class HideoutRequirementDto(
+    val id: String,
+    val quantity: Int
+)
+
+@Serializable
+data class HideoutLevelDto(
+    val unlockRequirements: List<HideoutRequirementDto> = emptyList(),
+    val requiredItems: List<HideoutRequirementDto> = emptyList(),
+    val crafts: List<String> = emptyList()
+)
+
+@Serializable
 data class HideoutDto(
     val id: String,
     val name: String,
     val description: String = "",
-    val maxLevel: Int = 1
+    val maxLevel: Int = 1,
+    val levels: Map<String, HideoutLevelDto> = emptyMap()
 )
 
 interface MetaForgeService {
