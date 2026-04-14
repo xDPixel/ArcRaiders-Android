@@ -54,11 +54,10 @@ fun ItemDetailScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(200.dp)
-                .background(
-                    color = if (item?.category?.contains("Blueprint", ignoreCase = true) == true) Color(0xFFE3F2FD) else MaterialTheme.colorScheme.surfaceVariant,
-                    shape = RoundedCornerShape(12.dp)
-                )
-                .blueprintGridBackground(isBlueprint = item?.category?.contains("Blueprint", ignoreCase = true) == true),
+                .blueprintGridBackground(
+                    isBlueprint = item?.category?.contains("Blueprint", ignoreCase = true) == true,
+                    cornerRadius = 12.dp
+                ),
             contentAlignment = Alignment.Center
         ) {
             AsyncImage(

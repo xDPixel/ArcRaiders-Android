@@ -18,7 +18,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import coil.compose.AsyncImage
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.background
@@ -27,23 +29,38 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.material.icons.filled.Refresh
 import com.arkcompanion.data.ItemEntity
 
-fun Modifier.blueprintGridBackground(isBlueprint: Boolean): Modifier = this.drawBehind {
-    if (!isBlueprint) return@drawBehind
-    val gridSize = 16.dp.toPx()
-    val gridColor = Color(0xFF2196F3).copy(alpha = 0.15f) // Subtle blue grid
+fun Modifier.blueprintGridBackground(isBlueprint: Boolean, cornerRadius: androidx.compose.ui.unit.Dp = 4.dp): Modifier = composed {
+    this.then(
+        if (isBlueprint) {
+            Modifier.background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFF101A39), // Dark Navy Blue
+                        Color(0xFF091024)  // Very Dark Navy
+                    )
+                ),
+                shape = RoundedCornerShape(cornerRadius)
+            ).drawBehind {
+                val gridSize = 24.dp.toPx()
+                val gridColor = Color(0xFF3A52D9).copy(alpha = 0.7f) // Glowing bright blue grid lines
 
-    // Draw vertical lines
-    var x = 0f
-    while (x < size.width) {
-        drawLine(color = gridColor, start = Offset(x, 0f), end = Offset(x, size.height), strokeWidth = 1f)
-        x += gridSize
-    }
-    // Draw horizontal lines
-    var y = 0f
-    while (y < size.height) {
-        drawLine(color = gridColor, start = Offset(0f, y), end = Offset(size.width, y), strokeWidth = 1f)
-        y += gridSize
-    }
+                // Draw vertical lines
+                var x = 0f
+                while (x < size.width) {
+                    drawLine(color = gridColor, start = Offset(x, 0f), end = Offset(x, size.height), strokeWidth = 1f)
+                    x += gridSize
+                }
+                // Draw horizontal lines
+                var y = 0f
+                while (y < size.height) {
+                    drawLine(color = gridColor, start = Offset(0f, y), end = Offset(size.width, y), strokeWidth = 1f)
+                    y += gridSize
+                }
+            }
+        } else {
+            Modifier.background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f), RoundedCornerShape(cornerRadius))
+        }
+    )
 }
 
 @Composable
@@ -162,10 +179,6 @@ fun ItemCard(item: ItemEntity, onItemClick: (String) -> Unit) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
-                    .background(
-                        color = if (item.category.contains("Blueprint", ignoreCase = true)) Color(0xFFE3F2FD) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
-                        shape = RoundedCornerShape(4.dp)
-                    )
                     .blueprintGridBackground(isBlueprint = item.category.contains("Blueprint", ignoreCase = true))
             ) {
                 AsyncImage(
