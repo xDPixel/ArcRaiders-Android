@@ -26,7 +26,11 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.input.ImeAction
 import com.arkcompanion.data.ItemEntity
 
 fun Modifier.blueprintGridBackground(isBlueprint: Boolean, cornerRadius: androidx.compose.ui.unit.Dp = 4.dp): Modifier = composed {
@@ -86,6 +90,7 @@ fun ItemsScreen(
     val searchQuery by viewModel.searchQuery.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
     val categories by viewModel.categories.collectAsState()
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Row(
@@ -116,7 +121,22 @@ fun ItemsScreen(
             modifier = Modifier.fillMaxWidth(),
             placeholder = { Text("Search items...") },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search Icon") },
-            shape = RoundedCornerShape(12.dp)
+            trailingIcon = {
+                Text(
+                    text = "${items.size}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+            },
+            shape = RoundedCornerShape(12.dp),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(
+                onSearch = {
+                    keyboardController?.hide()
+                }
+            )
         )
 
         Spacer(modifier = Modifier.height(12.dp))

@@ -86,7 +86,7 @@ fun HideoutProgressionNode(
             Column(modifier = Modifier.padding(16.dp)) {
                 if (levelData.requiredItems.isNotEmpty()) {
                     Text(
-                        text = "Upgrade Cost",
+                        text = if (levelNumber == 1) "Build Cost" else "Upgrade Cost",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,

@@ -102,6 +102,11 @@ class HideoutViewModel : ViewModel() {
                         else -> dto.maxLevel
                     }
 
+                    val filteredUiLevels = uiLevels.filterKeys { 
+                        val levelInt = it.toIntOrNull() ?: 1
+                        levelInt <= maxLevel
+                    }
+
                     HideoutStationUiModel(
                         id = dto.id,
                         name = dto.name,
@@ -110,7 +115,7 @@ class HideoutViewModel : ViewModel() {
                         maxLevel = maxLevel,
                         currentLevel = 1,
                         targetLevel = actualMinLevel.coerceAtMost(maxLevel),
-                        levels = uiLevels,
+                        levels = filteredUiLevels,
                         isExpanded = false
                     )
                 }
