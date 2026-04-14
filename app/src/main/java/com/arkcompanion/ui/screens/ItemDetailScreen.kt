@@ -12,6 +12,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Color
 import coil.compose.AsyncImage
 import androidx.lifecycle.viewmodel.compose.viewModel
 
@@ -53,7 +54,11 @@ fun ItemDetailScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(200.dp)
-                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp)),
+                .background(
+                    color = if (item?.category?.contains("Blueprint", ignoreCase = true) == true) Color(0xFFE3F2FD) else MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(12.dp)
+                )
+                .blueprintGridBackground(isBlueprint = item?.category?.contains("Blueprint", ignoreCase = true) == true),
             contentAlignment = Alignment.Center
         ) {
             AsyncImage(

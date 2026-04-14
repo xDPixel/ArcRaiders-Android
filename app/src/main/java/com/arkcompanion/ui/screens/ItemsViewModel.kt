@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 
 data class ItemsUiState(
@@ -60,6 +61,40 @@ class ItemsViewModel : ViewModel() {
 
     fun onCategorySelected(category: String) {
         _selectedCategory.value = category
+    }
+
+    fun refreshAllAppContent() {
+        viewModelScope.launch {
+            _uiState.value = ItemsUiState(isLoading = true, errorMessage = null)
+            val itemsJob = async { DataRepository.getItems(forceRefresh = true) }
+            val arcsJob = async { DataRepository.getArcs(forceRefresh = true) }
+            val hideoutJob = async { DataRepository.getHideout(forceRefresh = true) }
+
+            val itemsResult = itemsJob.await()
+            arcsJob.await()
+            hideoutJob.await()
+
+            itemsResult.onSuccess { liveItems ->
+                _allItems.value = liveItems.map { dto ->
+                    ItemEntity(
+                        id = dto.id,
+                        name = dto.name,
+                        imageUrl = dto.imageUrl,
+                        price = dto.price,
+                        rarity = dto.rarity.ifBlank { "Unknown" },
+                        category = dto.category.ifBlank { "Unknown" }
+                    )
+                }
+                _uiState.value = ItemsUiState(isLoading = false, errorMessage = null)
+            }.onFailure { error ->
+                Log.e(TAG, "Live API fetch failed for items", error)
+                _allItems.value = emptyList()
+                _uiState.value = ItemsUiState(
+                    isLoading = false,
+                    errorMessage = error.message ?: "Unable to load live item data."
+                )
+            }
+        }
     }
 
     fun refresh(forceRefresh: Boolean = true) {

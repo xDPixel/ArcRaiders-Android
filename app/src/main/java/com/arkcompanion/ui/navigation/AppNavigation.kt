@@ -13,20 +13,29 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.ui.graphics.vector.ImageVector
 import com.arkcompanion.ui.screens.ArcsScreen
 import com.arkcompanion.ui.screens.HideoutScreen
 import com.arkcompanion.ui.screens.ItemsScreen
 import com.arkcompanion.ui.screens.ItemDetailScreen
 import com.arkcompanion.ui.screens.ArcDetailScreen
+import com.arkcompanion.ui.screens.MoreScreen
 
-sealed class Screen(val route: String, val title: String) {
-    object Items : Screen("items", "Items")
-    object Arcs : Screen("arcs", "Arcs")
-    object Hideout : Screen("hideout", "Hideout")
-    object ItemDetail : Screen("item_detail/{itemId}", "Item Detail") {
+sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
+    object Items : Screen("items", "Items", Icons.Default.List)
+    object Arcs : Screen("arcs", "Arcs", Icons.Default.Home)
+    object Hideout : Screen("hideout", "Hideout", Icons.Default.Build)
+    object More : Screen("more", "More", Icons.Default.MoreVert)
+    
+    object ItemDetail : Screen("item_detail/{itemId}", "Item Detail", Icons.Default.List) {
         fun createRoute(itemId: String) = "item_detail/$itemId"
     }
-    object ArcDetail : Screen("arc_detail/{arcId}", "ARC Detail") {
+    object ArcDetail : Screen("arc_detail/{arcId}", "ARC Detail", Icons.Default.Home) {
         fun createRoute(arcId: String) = "arc_detail/$arcId"
     }
 }
@@ -37,7 +46,8 @@ fun MainScreen() {
     val items = listOf(
         Screen.Items,
         Screen.Arcs,
-        Screen.Hideout
+        Screen.Hideout,
+        Screen.More
     )
 
     Scaffold(
@@ -50,7 +60,7 @@ fun MainScreen() {
                 val currentDestination = navBackStackEntry?.destination
                 items.forEach { screen ->
                     NavigationBarItem(
-                        icon = { Text(screen.title.take(1)) }, // Placeholder icon
+                        icon = { Icon(screen.icon, contentDescription = screen.title) },
                         label = { Text(screen.title) },
                         selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
                         onClick = {
@@ -79,6 +89,7 @@ fun MainScreen() {
                 }) 
             }
             composable(Screen.Hideout.route) { HideoutScreen() }
+            composable(Screen.More.route) { MoreScreen(navController) }
             composable(
                 route = Screen.ItemDetail.route,
                 arguments = listOf(navArgument("itemId") { type = NavType.StringType })

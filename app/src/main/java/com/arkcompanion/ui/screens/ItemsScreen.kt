@@ -22,7 +22,29 @@ import androidx.compose.ui.graphics.Color
 import coil.compose.AsyncImage
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.background
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.material.icons.filled.Refresh
 import com.arkcompanion.data.ItemEntity
+
+fun Modifier.blueprintGridBackground(isBlueprint: Boolean): Modifier = this.drawBehind {
+    if (!isBlueprint) return@drawBehind
+    val gridSize = 16.dp.toPx()
+    val gridColor = Color(0xFF2196F3).copy(alpha = 0.15f) // Subtle blue grid
+
+    // Draw vertical lines
+    var x = 0f
+    while (x < size.width) {
+        drawLine(color = gridColor, start = Offset(x, 0f), end = Offset(x, size.height), strokeWidth = 1f)
+        x += gridSize
+    }
+    // Draw horizontal lines
+    var y = 0f
+    while (y < size.height) {
+        drawLine(color = gridColor, start = Offset(0f, y), end = Offset(size.width, y), strokeWidth = 1f)
+        y += gridSize
+    }
+}
 
 @Composable
 fun getRarityColor(rarity: String): Color {
@@ -49,13 +71,27 @@ fun ItemsScreen(
     val categories by viewModel.categories.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text(
-            text = "Items",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Items",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            IconButton(
+                onClick = { viewModel.refreshAllAppContent() }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = "Refresh App Content",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
 
         OutlinedTextField(
             value = searchQuery,
@@ -126,7 +162,11 @@ fun ItemCard(item: ItemEntity, onItemClick: (String) -> Unit) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
-                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f), RoundedCornerShape(4.dp))
+                    .background(
+                        color = if (item.category.contains("Blueprint", ignoreCase = true)) Color(0xFFE3F2FD) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
+                        shape = RoundedCornerShape(4.dp)
+                    )
+                    .blueprintGridBackground(isBlueprint = item.category.contains("Blueprint", ignoreCase = true))
             ) {
                 AsyncImage(
                     model = item.imageUrl,
