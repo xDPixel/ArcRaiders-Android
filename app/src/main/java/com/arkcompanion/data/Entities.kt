@@ -19,5 +19,6 @@ data class ArcEntity(
     val name: String,
     val iconUrl: String,
     val imageUrl: String,
-    val description: String
+    val description: String,
+    val loot: List<ArcLootItemEntity> = emptyList()
 )

@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.arkcompanion.data.AppDatabase
 import com.arkcompanion.data.ArcEntity
+import com.arkcompanion.data.ArcLootItemEntity
 import com.arkcompanion.data.ItemEntity
 import com.arkcompanion.network.ArcDto
 import com.arkcompanion.network.EventScheduleDto
@@ -103,7 +104,18 @@ object DataRepository {
                     name = dto.name,
                     iconUrl = dto.icon,
                     imageUrl = dto.image,
-                    description = dto.description
+                    description = dto.description,
+                    loot = dto.loot.mapNotNull { lootDto ->
+                        lootDto.item?.let {
+                            ArcLootItemEntity(
+                                id = it.id,
+                                name = it.name,
+                                iconUrl = it.iconUrl,
+                                rarity = it.rarity,
+                                category = it.category
+                            )
+                        }
+                    }
                 )
             }
             dao.deleteAll()

@@ -30,12 +30,27 @@ data class ItemDto(
 )
 
 @Serializable
+data class ArcLootItemDto(
+    val id: String,
+    val name: String,
+    @SerialName("icon") val iconUrl: String = "",
+    val rarity: String = "",
+    @SerialName("item_type") val category: String = ""
+)
+
+@Serializable
+data class ArcLootResponseDto(
+    val item: ArcLootItemDto? = null
+)
+
+@Serializable
 data class ArcDto(
     val id: String,
     val name: String,
     val icon: String = "",
     val image: String = "",
-    val description: String = ""
+    val description: String = "",
+    val loot: List<ArcLootResponseDto> = emptyList()
 )
 
 @Serializable
@@ -70,7 +85,8 @@ interface MetaForgeService {
     @GET("arcs")
     suspend fun getArcs(
         @Query("page") page: Int = 1,
-        @Query("limit") limit: Int = 100
+        @Query("limit") limit: Int = 100,
+        @Query("includeLoot") includeLoot: Boolean = true
     ): PaginatedResponse<ArcDto>
 
     @GET("hideout")

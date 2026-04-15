@@ -208,6 +208,7 @@ fun MainScreen() {
                 ArcDetailScreen(
                     arcId = arcId, 
                     onBackClick = { navController.popBackStack() },
+                    onItemClick = { itemId -> navController.navigate(Screen.ItemDetail.createRoute(itemId)) },
                     viewModel = arcsViewModel
                 )
             }

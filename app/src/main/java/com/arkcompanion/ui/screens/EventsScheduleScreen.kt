@@ -28,17 +28,28 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import coil.compose.AsyncImage
+import kotlinx.coroutines.delay
 import com.arkcompanion.events.EventScheduleEntryUiModel
 import com.arkcompanion.events.EventScheduleSectionUiModel
 import com.arkcompanion.network.EventScheduleDto
@@ -250,56 +261,124 @@ fun EventScheduleRow(
     onToggleReminder: () -> Unit
 ) {
     val reminderButtonEnabled = settings.notificationsEnabled && entry.reminderAvailable
+    var currentTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(1000L)
+            currentTime = System.currentTimeMillis()
+        }
+    }
+
+    val totalDuration = entry.endTime - entry.startTime
+    val isStarted = currentTime >= entry.startTime && currentTime < entry.endTime
+    val isEnded = currentTime >= entry.endTime
+
+    fun formatTime(millis: Long): String {
+        val totalSeconds = millis / 1000
+        val h = totalSeconds / 3600
+        val m = (totalSeconds % 3600) / 60
+        val s = totalSeconds % 60
+        return if (h > 0) String.format(Locale.getDefault(), "%02d:%02d:%02d", h, m, s)
+        else String.format(Locale.getDefault(), "%02d:%02d", m, s)
+    }
+
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            AsyncImage(
-                model = entry.icon,
-                contentDescription = entry.name,
-                contentScale = ContentScale.Crop,
+        Column {
+            Row(
                 modifier = Modifier
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surface)
-            )
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(text = entry.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text(
-                    text = entry.map,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                AsyncImage(
+                    model = entry.icon,
+                    contentDescription = entry.name,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFF1A1A1A))
+                        .padding(4.dp)
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AssistChip(
-                        onClick = {},
-                        enabled = false,
-                        label = { Text(EventTimeFormatter.relativeLabel(entry.startTime, entry.endTime)) }
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(text = entry.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1)
+                    Text(
+                        text = entry.map,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1
                     )
-                    AssistChip(
-                        onClick = {},
-                        enabled = false,
-                        label = { Text(EventTimeFormatter.durationLabel(entry.startTime, entry.endTime)) }
-                    )
+                }
+                
+                IconButton(onClick = onToggleReminder, enabled = reminderButtonEnabled) {
+                    if (entry.reminderEnabled && settings.notificationsEnabled) {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = "Reminder On",
+                            tint = Color(0xFFFFD700)
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Outlined.Notifications,
+                            contentDescription = "Reminder Off",
+                            tint = Color.Gray
+                        )
+                    }
                 }
             }
-            if (entry.reminderEnabled) {
-                Button(onClick = onToggleReminder, enabled = reminderButtonEnabled) {
-                    Text(if (settings.notificationsEnabled) "Reminder On" else "Paused")
-                }
-            } else {
-                OutlinedButton(onClick = onToggleReminder, enabled = reminderButtonEnabled) {
-                    Text(
-                        when {
-                            !settings.notificationsEnabled -> "Notifications Off"
-                            !entry.reminderAvailable -> "Started"
-                            else -> "Remind Me"
+
+            if (!isEnded) {
+                if (isStarted) {
+                    val remaining = entry.endTime - currentTime
+                    val progress = (remaining.toFloat() / totalDuration.toFloat()).coerceIn(0f, 1f)
+                    val barColor = when {
+                        progress > 0.5f -> Color(0xFF4CAF50) // Green
+                        progress > 0.15f -> Color(0xFFFFEB3B) // Yellow
+                        else -> Color(0xFFF44336) // Red
+                    }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(28.dp)
+                            .background(barColor), 
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Ends in: ${formatTime(remaining)}", 
+                            style = MaterialTheme.typography.labelSmall, 
+                            color = Color.Black, 
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                } else {
+                    val untilStart = entry.startTime - currentTime
+                    val twoHoursMillis = 2 * 60 * 60 * 1000L
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(28.dp)
+                            .background(Color(0xFF2196F3)), 
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (untilStart <= twoHoursMillis) {
+                            Text(
+                                text = "Starts in: ${formatTime(untilStart)}", 
+                                style = MaterialTheme.typography.labelSmall, 
+                                color = Color.White, 
+                                fontWeight = FontWeight.Bold
+                            )
+                        } else {
+                            val timeStr = EventTimeFormatter.formatSectionHeader(entry.startTime) + " " + EventTimeFormatter.formatTimeOnly(entry.startTime)
+                            Text(
+                                text = "Starts at: $timeStr", 
+                                style = MaterialTheme.typography.labelSmall, 
+                                color = Color.White, 
+                                fontWeight = FontWeight.Bold
+                            )
                         }
-                    )
+                    }
                 }
             }
         }
@@ -355,6 +434,10 @@ object EventTimeFormatter {
      */
     fun formatSectionHeader(timestampMillis: Long): String {
         return dayFormatter.withZone(ZoneId.systemDefault()).format(Instant.ofEpochMilli(timestampMillis))
+    }
+
+    fun formatTimeOnly(timestampMillis: Long): String {
+        return timeFormatter.withZone(ZoneId.systemDefault()).format(Instant.ofEpochMilli(timestampMillis))
     }
 
     /**

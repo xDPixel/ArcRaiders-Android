@@ -25,7 +25,8 @@ fun List<EventScheduleDto>.toUiSections(
     settings: NotificationSettings,
     activeReminderIds: Set<String>
 ): List<EventScheduleSectionUiModel> {
-    return groupBy { it.startTime }
+    return filter { it.endTime > nowMillis } // Hide ended events
+        .groupBy { it.startTime }
         .toSortedMap()
         .map { (slotStartTime, slotEvents) ->
             val sortedEntries = slotEvents
