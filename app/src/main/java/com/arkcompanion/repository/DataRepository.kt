@@ -1,9 +1,16 @@
 package com.arkcompanion.repository
 
+import android.content.Context
 import android.util.Log
+import com.arkcompanion.data.AppDatabase
+import com.arkcompanion.data.ArcEntity
+import com.arkcompanion.data.ItemEntity
 import com.arkcompanion.network.ArcDto
+import com.arkcompanion.network.EventScheduleDto
 import com.arkcompanion.network.HideoutDto
 import com.arkcompanion.network.ItemDto
+import com.arkcompanion.network.QuestDto
+import com.arkcompanion.network.TraderResponseDto
 import com.arkcompanion.network.metaForgeService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -11,74 +18,106 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-// No persistent storage. Data is stored entirely in memory.
-// Cache is cleared on termination by OS.
+// DataRepository handles both local DB caching and live API fetching.
 object DataRepository {
     private const val TAG = "DataRepository"
     private const val PAGE_SIZE = 100
 
-    private val _itemsCache = MutableStateFlow<List<ItemDto>>(emptyList())
-    val itemsCache: StateFlow<List<ItemDto>> = _itemsCache.asStateFlow()
-    private val _arcsCache = MutableStateFlow<List<ArcDto>>(emptyList())
-    val arcsCache: StateFlow<List<ArcDto>> = _arcsCache.asStateFlow()
-    private val _hideoutCache = MutableStateFlow<List<HideoutDto>>(emptyList())
+    private var db: AppDatabase? = null
 
-    private var itemsLastFetchTime = 0L
-    private var arcsLastFetchTime = 0L
+    fun initialize(context: Context) {
+        if (db == null) {
+            db = AppDatabase.getDatabase(context)
+        }
+    }
+
+    private val _hideoutCache = MutableStateFlow<List<HideoutDto>>(emptyList())
     private var hideoutLastFetchTime = 0L
-    private const val CACHE_TTL = 5 * 60 * 1000L // 5 mins in-memory TTL
+
+    private val _tradersCache = MutableStateFlow<TraderResponseDto?>(null)
+    private var tradersLastFetchTime = 0L
+
+    private val _questsCache = MutableStateFlow<List<QuestDto>>(emptyList())
+    private var questsLastFetchTime = 0L
+
+    private val _eventsScheduleCache = MutableStateFlow<List<EventScheduleDto>>(emptyList())
+    private var eventsScheduleLastFetchTime = 0L
+
+    private const val CACHE_TTL = 5 * 60 * 1000L // 5 mins in-memory TTL for Hideout
     private val mutex = Mutex()
 
-    suspend fun getItems(forceRefresh: Boolean = false): Result<List<ItemDto>> {
-        val now = System.currentTimeMillis()
-        
-        mutex.withLock {
-            if (!forceRefresh && _itemsCache.value.isNotEmpty() && (now - itemsLastFetchTime) < CACHE_TTL) {
-                return Result.success(_itemsCache.value)
+    suspend fun getItems(forceRefresh: Boolean = false): Result<List<ItemEntity>> {
+        requireNotNull(db) { "DataRepository not initialized" }
+        val dao = db!!.itemDao()
+
+        if (!forceRefresh) {
+            val localData = dao.getAllItems()
+            if (localData.isNotEmpty()) {
+                return Result.success(localData)
             }
         }
 
         return try {
             val freshData = fetchAllItems()
-            mutex.withLock {
-                _itemsCache.value = freshData
-                itemsLastFetchTime = System.currentTimeMillis()
+            val entities = freshData.map { dto ->
+                ItemEntity(
+                    id = dto.id,
+                    name = dto.name,
+                    imageUrl = dto.imageUrl,
+                    price = dto.price,
+                    rarity = dto.rarity.ifBlank { "Unknown" },
+                    category = dto.category.ifBlank { "Unknown" }
+                )
             }
-            Result.success(freshData)
+            dao.deleteAll()
+            dao.insertAll(entities)
+            Result.success(entities)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to fetch items from live API", e)
-            if (_itemsCache.value.isNotEmpty()) {
-                Log.w(TAG, "Using cached live items after API failure")
-                Result.success(_itemsCache.value)
+            val localData = dao.getAllItems()
+            if (localData.isNotEmpty()) {
+                Log.w(TAG, "Using cached DB items after API failure")
+                Result.success(localData)
             } else {
                 Result.failure(e)
             }
         }
     }
 
-    suspend fun getArcs(forceRefresh: Boolean = false): Result<List<ArcDto>> {
-        val now = System.currentTimeMillis()
+    suspend fun getArcs(forceRefresh: Boolean = false): Result<List<ArcEntity>> {
+        requireNotNull(db) { "DataRepository not initialized" }
+        val dao = db!!.arcDao()
 
-        mutex.withLock {
-            if (!forceRefresh && _arcsCache.value.isNotEmpty() && (now - arcsLastFetchTime) < CACHE_TTL) {
-                return Result.success(_arcsCache.value)
+        if (!forceRefresh) {
+            val localData = dao.getAllArcs()
+            if (localData.isNotEmpty()) {
+                return Result.success(localData)
             }
         }
 
-        try {
+        return try {
             val freshData = fetchAllArcs()
-            mutex.withLock {
-                _arcsCache.value = freshData
-                arcsLastFetchTime = System.currentTimeMillis()
+            val entities = freshData.map { dto ->
+                ArcEntity(
+                    id = dto.id,
+                    name = dto.name,
+                    iconUrl = dto.icon,
+                    imageUrl = dto.image,
+                    description = dto.description
+                )
             }
-            return Result.success(freshData)
+            dao.deleteAll()
+            dao.insertAll(entities)
+            Result.success(entities)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to fetch ARCs from live API", e)
-            if (_arcsCache.value.isNotEmpty()) {
-                Log.w(TAG, "Using cached live ARCs after API failure")
-                return Result.success(_arcsCache.value)
+            val localData = dao.getAllArcs()
+            if (localData.isNotEmpty()) {
+                Log.w(TAG, "Using cached DB ARCs after API failure")
+                Result.success(localData)
+            } else {
+                Result.failure(e)
             }
-            return Result.failure(e)
         }
     }
 
@@ -106,6 +145,103 @@ object DataRepository {
             }
             return Result.failure(e)
         }
+    }
+
+    suspend fun getTraders(forceRefresh: Boolean = false): Result<TraderResponseDto> {
+        val now = System.currentTimeMillis()
+
+        mutex.withLock {
+            val cache = _tradersCache.value
+            if (!forceRefresh && cache != null && (now - tradersLastFetchTime) < CACHE_TTL) {
+                return Result.success(cache)
+            }
+        }
+
+        return try {
+            val freshData = metaForgeService.getTraders()
+            mutex.withLock {
+                _tradersCache.value = freshData
+                tradersLastFetchTime = System.currentTimeMillis()
+            }
+            Result.success(freshData)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to fetch Traders from live API", e)
+            val cache = _tradersCache.value
+            if (cache != null) {
+                Log.w(TAG, "Using cached Traders after API failure")
+                Result.success(cache)
+            } else {
+                Result.failure(e)
+            }
+        }
+    }
+
+    suspend fun getQuests(forceRefresh: Boolean = false): Result<List<QuestDto>> {
+        val now = System.currentTimeMillis()
+
+        mutex.withLock {
+            if (!forceRefresh && _questsCache.value.isNotEmpty() && (now - questsLastFetchTime) < CACHE_TTL) {
+                return Result.success(_questsCache.value)
+            }
+        }
+
+        return try {
+            val freshData = fetchAllQuests()
+            mutex.withLock {
+                _questsCache.value = freshData
+                questsLastFetchTime = System.currentTimeMillis()
+            }
+            Result.success(freshData)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to fetch Quests from live API", e)
+            if (_questsCache.value.isNotEmpty()) {
+                Log.w(TAG, "Using cached Quests after API failure")
+                Result.success(_questsCache.value)
+            } else {
+                Result.failure(e)
+            }
+        }
+    }
+
+    suspend fun getEventsSchedule(forceRefresh: Boolean = false): Result<List<EventScheduleDto>> {
+        val now = System.currentTimeMillis()
+
+        mutex.withLock {
+            if (!forceRefresh && _eventsScheduleCache.value.isNotEmpty() && (now - eventsScheduleLastFetchTime) < CACHE_TTL) {
+                return Result.success(_eventsScheduleCache.value)
+            }
+        }
+
+        return try {
+            val freshData = metaForgeService.getEventsSchedule().data.sortedBy { it.startTime }
+            mutex.withLock {
+                _eventsScheduleCache.value = freshData
+                eventsScheduleLastFetchTime = System.currentTimeMillis()
+            }
+            Result.success(freshData)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to fetch Events Schedule from live API", e)
+            if (_eventsScheduleCache.value.isNotEmpty()) {
+                Log.w(TAG, "Using cached Events Schedule after API failure")
+                Result.success(_eventsScheduleCache.value)
+            } else {
+                Result.failure(e)
+            }
+        }
+    }
+
+    private suspend fun fetchAllQuests(): List<QuestDto> {
+        val aggregated = mutableListOf<QuestDto>()
+        var page = 1
+
+        while (true) {
+            val response = metaForgeService.getQuests(page = page, limit = PAGE_SIZE)
+            aggregated += response.data
+            if (response.pagination?.hasNextPage != true) break
+            page++
+        }
+
+        return aggregated
     }
 
     private suspend fun fetchAllItems(): List<ItemDto> {

@@ -3,7 +3,7 @@ package com.arkcompanion
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.arkcompanion.network.ItemDto
+import com.arkcompanion.data.ItemEntity
 import com.arkcompanion.repository.DataRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,7 +12,7 @@ import kotlinx.coroutines.launch
 
 sealed class UiState {
     object Loading : UiState()
-    data class Success(val items: List<ItemDto>) : UiState()
+    data class Success(val items: List<ItemEntity>) : UiState()
     data class Error(val message: String) : UiState()
 }
 

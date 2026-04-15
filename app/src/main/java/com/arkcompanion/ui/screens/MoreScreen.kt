@@ -1,7 +1,12 @@
 package com.arkcompanion.ui.screens
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,16 +19,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.arkcompanion.ui.navigation.Screen
 
 @Composable
 fun MoreScreen(navController: NavController) {
-    // Placeholder list for future features
     val moreOptions = listOf(
-        "Traders",
-        "Quests",
-        "Events Schedule",
-        "Game Map",
-        "Settings"
+        MoreDestination("Traders", "Browse traders and preserve trader quest access.", "traders"),
+        MoreDestination("Events Schedule", "Inspect the live rotation and track reminders.", Screen.EventsSchedule.route),
+        MoreDestination("Game Map", "Reserved for the upcoming interactive map flow.", null),
+        MoreDestination("Settings", "Manage notification preferences and reminder timing.", Screen.Settings.route)
     )
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
@@ -39,8 +43,11 @@ fun MoreScreen(navController: NavController) {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(moreOptions) { option ->
-                MoreOptionCard(title = option) {
-                    // TODO: Navigate to the respective screen when implemented
+                MoreOptionCard(
+                    title = option.title,
+                    subtitle = option.subtitle
+                ) {
+                    option.route?.let(navController::navigate)
                 }
             }
         }
@@ -48,7 +55,7 @@ fun MoreScreen(navController: NavController) {
 }
 
 @Composable
-fun MoreOptionCard(title: String, onClick: () -> Unit) {
+fun MoreOptionCard(title: String, subtitle: String, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -63,12 +70,20 @@ fun MoreOptionCard(title: String, onClick: () -> Unit) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
             Icon(
                 imageVector = Icons.Default.KeyboardArrowRight,
                 contentDescription = "Go to $title",
@@ -77,3 +92,9 @@ fun MoreOptionCard(title: String, onClick: () -> Unit) {
         }
     }
 }
+
+data class MoreDestination(
+    val title: String,
+    val subtitle: String,
+    val route: String?
+)

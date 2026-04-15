@@ -87,6 +87,7 @@ dependencies {
 
     // Navigation
     implementation("androidx.navigation:navigation-compose:2.7.7")
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
 
     // Room Database
     val room_version = "2.8.4"

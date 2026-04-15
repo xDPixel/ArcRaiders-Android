@@ -28,23 +28,15 @@ class ArcsViewModel : ViewModel() {
     val uiState: StateFlow<ArcsUiState> = _uiState
 
     init {
-        refresh()
+        refresh(forceRefresh = false)
     }
 
-    fun refresh(forceRefresh: Boolean = true) {
+    fun refresh(forceRefresh: Boolean = false) {
         viewModelScope.launch {
             _uiState.value = ArcsUiState(isLoading = true, errorMessage = null)
             val result = DataRepository.getArcs(forceRefresh = forceRefresh)
             result.onSuccess { liveArcs ->
-                _arcs.value = liveArcs.map { dto ->
-                    ArcEntity(
-                        id = dto.id,
-                        name = dto.name,
-                        iconUrl = dto.icon,
-                        imageUrl = dto.image,
-                        description = dto.description
-                    )
-                }
+                _arcs.value = liveArcs
                 _uiState.value = ArcsUiState(isLoading = false, errorMessage = null)
             }.onFailure { error ->
                 Log.e(TAG, "Live API fetch failed for arcs", error)

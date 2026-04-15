@@ -75,6 +75,18 @@ interface MetaForgeService {
 
     @GET("hideout")
     suspend fun getHideout(): List<HideoutDto>
+
+    @GET("traders")
+    suspend fun getTraders(): TraderResponseDto
+
+    @GET("quests")
+    suspend fun getQuests(
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 100
+    ): QuestsResponseDto
+
+    @GET("events-schedule")
+    suspend fun getEventsSchedule(): EventsScheduleResponseDto
 }
 
 val metaForgeService: MetaForgeService by lazy {

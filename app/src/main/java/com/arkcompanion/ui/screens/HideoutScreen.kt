@@ -18,7 +18,10 @@ import com.arkcompanion.ui.components.HideoutProgressionNode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HideoutScreen(viewModel: HideoutViewModel = viewModel()) {
+fun HideoutScreen(
+    onItemClick: (String) -> Unit,
+    viewModel: HideoutViewModel = viewModel()
+) {
     val stations by viewModel.stations.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
     var selectedStationIndex by remember { mutableIntStateOf(0) }
@@ -124,7 +127,8 @@ fun HideoutScreen(viewModel: HideoutViewModel = viewModel()) {
                                     HideoutProgressionNode(
                                         levelNumber = levelNum,
                                         levelData = levelData,
-                                        isLast = isLast
+                                        isLast = isLast,
+                                        onItemClick = onItemClick
                                     )
                                 }
                             }

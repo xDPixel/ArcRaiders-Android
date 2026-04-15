@@ -52,7 +52,7 @@ class ItemsViewModel : ViewModel() {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), listOf("All"))
 
     init {
-        refresh()
+        refresh(forceRefresh = false)
     }
 
     fun onSearchQueryChanged(query: String) {
@@ -75,16 +75,7 @@ class ItemsViewModel : ViewModel() {
             hideoutJob.await()
 
             itemsResult.onSuccess { liveItems ->
-                _allItems.value = liveItems.map { dto ->
-                    ItemEntity(
-                        id = dto.id,
-                        name = dto.name,
-                        imageUrl = dto.imageUrl,
-                        price = dto.price,
-                        rarity = dto.rarity.ifBlank { "Unknown" },
-                        category = dto.category.ifBlank { "Unknown" }
-                    )
-                }
+                _allItems.value = liveItems
                 _uiState.value = ItemsUiState(isLoading = false, errorMessage = null)
             }.onFailure { error ->
                 Log.e(TAG, "Live API fetch failed for items", error)
@@ -97,21 +88,12 @@ class ItemsViewModel : ViewModel() {
         }
     }
 
-    fun refresh(forceRefresh: Boolean = true) {
+    fun refresh(forceRefresh: Boolean = false) {
         viewModelScope.launch {
             _uiState.value = ItemsUiState(isLoading = true, errorMessage = null)
             val result = DataRepository.getItems(forceRefresh = forceRefresh)
             result.onSuccess { liveItems ->
-                _allItems.value = liveItems.map { dto ->
-                    ItemEntity(
-                        id = dto.id,
-                        name = dto.name,
-                        imageUrl = dto.imageUrl,
-                        price = dto.price,
-                        rarity = dto.rarity.ifBlank { "Unknown" },
-                        category = dto.category.ifBlank { "Unknown" }
-                    )
-                }
+                _allItems.value = liveItems
                 _uiState.value = ItemsUiState(isLoading = false, errorMessage = null)
             }.onFailure { error ->
                 Log.e(TAG, "Live API fetch failed for items", error)

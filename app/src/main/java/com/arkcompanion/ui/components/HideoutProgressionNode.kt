@@ -2,6 +2,7 @@ package com.arkcompanion.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -27,7 +28,8 @@ import com.arkcompanion.ui.screens.HideoutLevelUiModel
 fun HideoutProgressionNode(
     levelNumber: Int,
     levelData: HideoutLevelUiModel,
-    isLast: Boolean
+    isLast: Boolean,
+    onItemClick: (String) -> Unit
 ) {
     val lineColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
     
@@ -94,7 +96,7 @@ fun HideoutProgressionNode(
                     )
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         items(levelData.requiredItems) { req ->
-                            HideoutItemView(req)
+                            HideoutItemView(req, onItemClick)
                         }
                     }
                 }
@@ -115,7 +117,7 @@ fun HideoutProgressionNode(
                     )
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         items(levelData.crafts) { craft ->
-                            HideoutItemView(craft)
+                            HideoutItemView(craft, onItemClick)
                         }
                     }
                 }
@@ -134,10 +136,12 @@ fun HideoutProgressionNode(
 }
 
 @Composable
-fun HideoutItemView(req: HideoutItemUiModel) {
+fun HideoutItemView(req: HideoutItemUiModel, onItemClick: (String) -> Unit) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(80.dp)
+        modifier = Modifier
+            .width(80.dp)
+            .clickable { onItemClick(req.itemId) }
     ) {
         Box(
             modifier = Modifier
